@@ -1,0 +1,86 @@
+tell me
+	set startDate to current date
+	set time of startDate to 0
+	set year of startDate to 2013
+	set month of startDate to 1
+	set day of startDate to 1
+	log startDate
+	
+	set endDate to current date
+	set time of endDate to 0
+	set year of endDate to 2018
+	set month of endDate to 1
+	set day of endDate to 1
+	log endDate
+end tell
+
+set theFolderName to "Sent"
+set theOutputPath to "/User/user/Downloads/Mails"
+
+tell application "Microsoft Outlook"
+	set counter to 0
+	set myFolder to first mail folder where its name is theFolderName
+	repeat with currentMessage in every message in myFolder
+		set counter to counter + 1
+		set thisSubject to subject of currentMessage
+		set thisSender to sender of currentMessage
+		set thisSent to time sent of currentMessage
+		set thisReceived to time received of currentMessage
+		
+		if thisReceived ≥ startDate and thisReceived < endDate then
+			set theMessageId to text -5 thru -1 of ("00000" & counter)
+			
+			set yrt to year of thisSent
+			set mnt to text -2 thru -1 of ("00" & (month of thisSent as integer))
+			set dyt to text -2 thru -1 of ("00" & (day of thisSent as integer))
+			set hrt to text -2 thru -1 of ("00" & (hours of thisSent))
+			set mit to text -2 thru -1 of ("00" & (minutes of thisSent))
+			set sct to text -2 thru -1 of ("00" & (seconds of thisSent))
+			
+			tell me
+				try
+					set thisSenderName to name of thisSender
+				on error
+					set thisSenderName to address of thisSender
+					set thisSenderName to FixName(thisSenderName, "@", "_")
+					set thisSenderName to FixName(thisSenderName, ".", "_")
+				end try
+				set thisSenderName to FixName(thisSenderName, ",", "")
+				set thisSenderName to FixName(thisSenderName, " ", "_")
+			end tell
+			
+			set sumText to yrt & mnt & dyt & "_" & hrt & mit & sct & "_" & thisSenderName
+			
+			set thisSource to source of currentMessage
+			
+			set theFileName to theOutputPath & theFolderName & "/" & theMessageId & "_" & sumText & ".eml"
+			tell me
+				-- do shell script "echo " & quoted form of theData & " >> " & theFileName
+				set outputFile to open for access theFileName with write permission
+				try
+					set eof outputFile to 0
+					write thisSource to outputFile
+					close access outputFile
+				on error
+					log "Some error happened during saving the attachment"
+					try
+						close access outputFile
+					end try
+				end try
+			end tell
+			log sumText
+		else
+			log "!!! Out of date window: " & name of thisSender & " : " & thisSubject & " @ " & thisSent
+		end if
+	end repeat
+	return "Done"
+end tell
+
+on FixName(currentName, oldString, newString)
+	set AppleScript's text item delimiters to oldString
+	set listName to every text item of currentName
+	set AppleScript's text item delimiters to newString
+	set myResult to (listName as string)
+	set AppleScript's text item delimiters to ""
+	return myResult
+end FixName
